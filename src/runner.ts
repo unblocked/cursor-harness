@@ -153,8 +153,8 @@ export async function run(config: Config): Promise<ComparisonResult> {
       mcpDisable("unblocked");
     }
 
-    unblocked = await runArm(config, "unblocked", unblockedDir);
     baseline = await runArm(config, "baseline", baselineDir);
+    unblocked = await runArm(config, "unblocked", unblockedDir);
   } finally {
     if (!config.keepWorktrees) {
       log("Cleaning up worktrees...");
