@@ -98,6 +98,11 @@ export function mcpDisable(identifier: string): void {
   execSync(`${BINARY} mcp disable ${identifier}`, { stdio: "pipe" });
 }
 
+export function mcpEnable(identifier: string): void {
+  log(`Enabling MCP: ${identifier}`);
+  execSync(`${BINARY} mcp enable ${identifier}`, { stdio: "pipe" });
+}
+
 export function worktreePath(repoPath: string, name: string): string {
   const repoName = path.basename(repoPath);
   return path.join(os.homedir(), ".cursor", "worktrees", repoName, name);
