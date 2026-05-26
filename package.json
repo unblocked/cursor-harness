@@ -1,0 +1,19 @@
+{
+  "name": "cursor-harness",
+  "version": "0.1.0",
+  "description": "Run and measure Cursor CLI agent tasks with Unblocked context tracking",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/index.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.7.0"
+  }
+}
