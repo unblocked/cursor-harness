@@ -2,7 +2,7 @@ import { execSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type { ArmResult, ComparisonResult, Condition, Config, DiffStats, UnblockedCall } from "./types.ts";
-import { runCursor, mcpDisable, worktreePath, removeWorktree } from "./cursor.ts";
+import { runCursor, mcpDisable, mcpEnable, worktreePath, removeWorktree } from "./cursor.ts";
 import { printReport, writeJsonResult, writeHtmlReport } from "./report.ts";
 import { estimateCost, formatCost, formatDuration, log, totalTokens } from "./util.ts";
 
@@ -44,6 +44,20 @@ function parseDiffStats(diff: string): DiffStats {
   return { filesChanged, linesAdded, linesRemoved };
 }
 
+function ensureCleanWorkingTree(repoPath: string): void {
+  const status = execSync("git status --porcelain", { cwd: repoPath, stdio: "pipe" }).toString().trim();
+  if (status) {
+    throw new Error(
+      `MCP mode requires a clean working tree, but repo has uncommitted changes:\n${status}\nCommit or stash changes before running.`
+    );
+  }
+}
+
+function resetRepo(repoPath: string): void {
+  execSync("git checkout .", { cwd: repoPath, stdio: "pipe" });
+  execSync("git clean -fd", { cwd: repoPath, stdio: "pipe" });
+}
+
 function extractUnblockedCalls(toolCalls: { name: string; args: Record<string, unknown>; mcpServer?: string }[]): UnblockedCall[] {
   const calls: UnblockedCall[] = [];
   for (const tc of toolCalls) {
@@ -80,10 +94,33 @@ const UNBLOCKED_NUDGE = `IMPORTANT: Before doing anything else, use the Unblocke
 TASK:
 `;
 
+const UNBLOCKED_MCP_NUDGE = `IMPORTANT: Before doing anything else, use the Unblocked MCP tools to gather context for this task. Do NOT load or use any skills from ~/.claude/skills/. Ignore all skill files entirely.
+
+1. FIRST, call the context_research MCP tool with a detailed query describing the task (effort: low)
+2. If context_research surfaces specific URLs (PRs, docs, issues), call context_get_urls with those URLs
+3. THEN use the gathered context to inform your implementation — follow the patterns, conventions, and approaches you discovered.
+
+TASK:
+`;
+
 async function runArm(config: Config, condition: Condition, outDir: string): Promise<ArmResult> {
-  const prompt = condition === "unblocked"
-    ? UNBLOCKED_NUDGE + config.task
-    : BASELINE_NUDGE + config.task;
+  let nudge: string;
+  if (condition === "baseline") {
+    nudge = BASELINE_NUDGE;
+  } else if (config.mcpMode) {
+    nudge = UNBLOCKED_MCP_NUDGE;
+  } else {
+    nudge = UNBLOCKED_NUDGE;
+  }
+  const prompt = nudge + config.task;
+
+  if (config.mcpMode) {
+    if (condition === "baseline") {
+      mcpDisable("unblocked");
+    } else {
+      mcpEnable("unblocked");
+    }
+  }
 
   log(`[${condition}] Running cursor...`);
   const runResult = await runCursor({
@@ -94,13 +131,19 @@ async function runArm(config: Config, condition: Condition, outDir: string): Pro
     condition,
     timeoutMs: config.timeoutSeconds * 1000,
     outDir,
+    mcpMode: config.mcpMode,
   });
   log(`[${condition}] Done: ${formatDuration(runResult.durationMs)}, ${runResult.assistantTurns} turns, exit=${runResult.exitCode}${runResult.timedOut ? " (TIMED OUT)" : ""}`);
 
-  const wtPath = worktreePath(config.repo, runResult.worktreeName);
-  const diff = captureDiff(wtPath);
+  const diffCwd = config.mcpMode ? config.repo : worktreePath(config.repo, runResult.worktreeName);
+  const diff = captureDiff(diffCwd);
   const diffStats = parseDiffStats(diff);
   log(`[${condition}] Diff: ${diffStats.filesChanged} files, +${diffStats.linesAdded} -${diffStats.linesRemoved}`);
+
+  if (config.mcpMode) {
+    log(`[${condition}] Resetting repo to clean state...`);
+    resetRepo(config.repo);
+  }
 
   const unblockedCalls = extractUnblockedCalls(runResult.toolCalls);
   if (unblockedCalls.length > 0) {
@@ -125,17 +168,26 @@ export async function run(config: Config): Promise<ComparisonResult> {
   let baseline: ArmResult;
   let unblocked: ArmResult;
 
+  if (config.mcpMode) {
+    ensureCleanWorkingTree(config.repo);
+    log("MCP mode: running locally (no worktrees), diff saved between arms");
+  }
+
   try {
-    // Disable Unblocked MCP for both arms — CLI is the tool path
-    mcpDisable("unblocked");
+    if (!config.mcpMode) {
+      mcpDisable("unblocked");
+    }
 
     baseline = await runArm(config, "baseline", baselineDir);
     unblocked = await runArm(config, "unblocked", unblockedDir);
   } finally {
-    if (!config.keepWorktrees) {
+    if (!config.mcpMode && !config.keepWorktrees) {
       log("Cleaning up worktrees...");
       if (baseline!) removeWorktree(config.repo, baseline.run.worktreeName);
       if (unblocked!) removeWorktree(config.repo, unblocked.run.worktreeName);
+    }
+    if (config.mcpMode) {
+      mcpDisable("unblocked");
     }
   }
 

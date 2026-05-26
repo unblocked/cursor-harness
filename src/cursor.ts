@@ -98,6 +98,11 @@ export function mcpDisable(identifier: string): void {
   execSync(`${BINARY} mcp disable ${identifier}`, { stdio: "pipe" });
 }
 
+export function mcpEnable(identifier: string): void {
+  log(`Enabling MCP: ${identifier}`);
+  execSync(`${BINARY} mcp enable ${identifier}`, { stdio: "pipe" });
+}
+
 export function worktreePath(repoPath: string, name: string): string {
   const repoName = path.basename(repoPath);
   return path.join(os.homedir(), ".cursor", "worktrees", repoName, name);
@@ -120,6 +125,7 @@ export async function runCursor(opts: {
   condition: Condition;
   timeoutMs: number;
   outDir: string;
+  mcpMode?: boolean;
 }): Promise<RunResult> {
   const suffix = randomBytes(4).toString("hex");
   const wtName = `${opts.condition}-${suffix}`;
@@ -132,8 +138,7 @@ export async function runCursor(opts: {
     "--trust",
     "--model", opts.model,
     "--workspace", opts.repoPath,
-    "--worktree", wtName,
-    "--worktree-base", opts.branch,
+    ...(opts.mcpMode ? [] : ["--worktree", wtName, "--worktree-base", opts.branch]),
     opts.prompt,
   ];
 

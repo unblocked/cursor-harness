@@ -66,4 +66,5 @@ export interface Config {
   timeoutSeconds: number;
   branch: string;
   keepWorktrees: boolean;
+  mcpMode: boolean;
 }

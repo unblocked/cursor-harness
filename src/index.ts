@@ -22,7 +22,8 @@ program
   .option("--model <model>", "Model for cursor to use", "claude-opus-4-7")
   .option("--timeout <seconds>", "Max seconds per arm", "3600")
   .option("--branch <name>", "Branch to base worktree on (default: current HEAD)")
-  .option("--keep-worktrees", "Don't clean up worktrees after run", false);
+  .option("--keep-worktrees", "Don't clean up worktrees after run", false)
+  .option("--mcp", "Use Unblocked MCP server instead of CLI (runs locally, no worktrees)", false);
 
 program.parse();
 const opts = program.opts();
@@ -40,6 +41,7 @@ const config: Config = {
   timeoutSeconds: parseInt(opts.timeout),
   branch: opts.branch ?? getCurrentBranch(repoPath),
   keepWorktrees: opts.keepWorktrees,
+  mcpMode: opts.mcp,
 };
 
 run(config).catch((err) => {
