@@ -125,7 +125,6 @@ export async function runCursor(opts: {
   condition: Condition;
   timeoutMs: number;
   outDir: string;
-  mcpMode?: boolean;
 }): Promise<RunResult> {
   const suffix = randomBytes(4).toString("hex");
   const wtName = `${opts.condition}-${suffix}`;
@@ -138,7 +137,8 @@ export async function runCursor(opts: {
     "--trust",
     "--model", opts.model,
     "--workspace", opts.repoPath,
-    ...(opts.mcpMode ? [] : ["--worktree", wtName, "--worktree-base", opts.branch]),
+    "--worktree", wtName,
+    "--worktree-base", opts.branch,
     opts.prompt,
   ];
 
