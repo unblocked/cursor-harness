@@ -83,16 +83,6 @@ results/run-2026-05-26T15-52-09/
 | Tool call count | Parsed from stream-json `tool_call` events (exact) |
 | Unblocked query count | Filtered from CLI shell calls (exact) |
 | Git diff stats | Files changed, lines added/removed from worktree diff |
-
-## How it stays fair
-
-- **Same model, same agent, same tools.** Both runs use the identical Cursor CLI instance with the same flags. The only variable is whether the agent is nudged to use Unblocked context.
-- **Clean worktrees.** Cursor creates a fresh worktree from the same branch for each run. Both arms start from identical code.
-- **MCP disabled for both.** Unblocked MCP is disabled at the start — the enhanced arm uses the Unblocked CLI binary instead, keeping the tool surface identical.
-- **Contamination detection.** If the baseline arm calls Unblocked (MCP or CLI), the run is immediately killed.
-- **Sequential execution.** Baseline runs first, then enhanced.
-- **Procedural metrics.** Token counts, timing, and costs are computed from Cursor's stream-json output and published pricing. No estimation or LLM involvement.
-
 ## Supported models
 
 Any model available in Cursor that supports tool use. Cost estimation is available for:
