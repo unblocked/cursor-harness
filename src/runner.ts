@@ -66,7 +66,7 @@ function extractUnblockedCalls(toolCalls: { name: string; args: Record<string, u
   return calls;
 }
 
-const BASELINE_NUDGE = `IMPORTANT: Do NOT use any Unblocked tools, skills, or CLI commands. Do NOT call context_research, context_get_urls, or any tool/skill with "unblocked" in its name. Do NOT run the "unblocked" CLI binary. Do NOT load or use any skills from ~/.claude/skills/. Ignore all skill files entirely. Use only standard tools (Read, Edit, Grep, Glob, Shell) to complete this task.
+const BASELINE_NUDGE = `IMPORTANT: Do NOT use any Unblocked tools, skills, or CLI commands. Do NOT call context_research, context_get_urls, or any tool/skill with "unblocked" in its name. Do NOT run the "unblocked" CLI binary. You may use other tools and MCP servers.
 
 TASK:
 `;
